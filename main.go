@@ -20,9 +20,9 @@ type fetchConfig struct {
 }
 
 type billOrder struct {
-	Name   string
-	Time   string
-	Amount string
+	Name   string `json:"name"`
+	Time   string `json:"time"`
+	Amount string `json:"amount"`
 }
 
 func main() {

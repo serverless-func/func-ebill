@@ -12,3 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Parse cmb email
 - Automatically build and deploy with github workflow depend on [funcraft](https://github.com/alibaba/funcraft)
 - Automatically publish github release with [goreleaser](https://goreleaser.com/)
+
+## [1.0.1] - 2020-09-22
+
+### Bugfix
+
+- Lower case field in result json
