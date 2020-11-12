@@ -24,7 +24,7 @@ var (
 	// 07:53:41
 	timeRe = regexp.MustCompile(`(\d{2}:\d{2}:\d{2})`)
 	// 07:53:41人民币 8.00尾号3885 消费 支付宝-xxxx有限公司
-	orderRe = regexp.MustCompile(`(?m)([\d:]+)人民币([  \d.]+)(.*)`)
+	orderRe = regexp.MustCompile(`(?m)([\d:]+)人民币([  \d.,]+)(.*)`)
 )
 
 func cmb(cfg fetchConfig) ([]billOrder, error) {
@@ -143,9 +143,9 @@ func cmb(cfg fetchConfig) ([]billOrder, error) {
 
 					for _, order := range orderList {
 						// 获取交易时间/金额/描述
-						for _, match := range regexp.MustCompile(`(?m)([\d:]+)人民币([  \d.]+)(.*)`).FindAllStringSubmatch(order, -1) {
+						for _, match := range orderRe.FindAllStringSubmatch(order, -1) {
 							timeStr := strings.TrimSpace(match[1])
-							amountStr := strings.TrimSpace(match[2])
+							amountStr := strings.TrimSpace(strings.ReplaceAll(match[2], ",", ""))
 							name := strings.TrimSpace(match[3])
 
 							orders = append(orders, billOrder{Name: name, Time: dateStr + " " + timeStr, Amount: amountStr})
