@@ -59,11 +59,14 @@ func setupRouter(r *gin.Engine) {
 			c.JSON(http.StatusOK, failed(err.Error()))
 			return
 		}
-		filename := filepath.Base(file.Filename)
+		filename := "/tmp/" + filepath.Base(file.Filename)
 		if err := c.SaveUploadedFile(file, filename); err != nil {
 			c.JSON(http.StatusOK, failed(err.Error()))
 			return
 		}
+		defer func() {
+			_ = os.Remove(filename)
+		}()
 
 		orders, err := fileParseCmb(filename)
 		if err != nil {
@@ -71,10 +74,6 @@ func setupRouter(r *gin.Engine) {
 			return
 		}
 
-		defer func() {
-			_ = os.Remove(filename)
-		}()
-		
 		c.JSON(http.StatusOK, data(orders))
 	})
 }
