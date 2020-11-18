@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -17,12 +18,6 @@ type fetchConfig struct {
 	Username string `form:"username"`
 	Password string `form:"password"`
 	Hour     int64  `form:"hour"`
-}
-
-type billOrder struct {
-	Name   string `json:"name"`
-	Time   string `json:"time"`
-	Amount string `json:"amount"`
 }
 
 func main() {
@@ -49,12 +44,37 @@ func setupRouter(r *gin.Engine) {
 			cfg.Hour = 24
 		}
 
-		orders, err := cmb(cfg)
+		orders, err := emailParseCmb(cfg)
 		if err != nil {
 			c.JSON(http.StatusOK, failed(err.Error()))
 			return
 		}
 
+		c.JSON(http.StatusOK, data(orders))
+	})
+
+	rg.POST("/file/cmb", func(c *gin.Context) {
+		file, err := c.FormFile("file")
+		if err != nil {
+			c.JSON(http.StatusOK, failed(err.Error()))
+			return
+		}
+		filename := filepath.Base(file.Filename)
+		if err := c.SaveUploadedFile(file, filename); err != nil {
+			c.JSON(http.StatusOK, failed(err.Error()))
+			return
+		}
+
+		orders, err := fileParseCmb(filename)
+		if err != nil {
+			c.JSON(http.StatusOK, failed(err.Error()))
+			return
+		}
+
+		defer func() {
+			_ = os.Remove(filename)
+		}()
+		
 		c.JSON(http.StatusOK, data(orders))
 	})
 }
