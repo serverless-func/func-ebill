@@ -45,6 +45,9 @@ var (
 	timeRe = regexp.MustCompile(`(\d{2}:\d{2}:\d{2})`)
 	// 07:53:41人民币 8.00尾号3885 消费 支付宝-xxxx有限公司
 	orderRe = regexp.MustCompile(`(?m)([\d:]+)人民币([  \d.,]+)(.*)`)
+	orderCNYRe = regexp.MustCompile(`(?m)([\d:]+)CNY([  \d.,]+)(.*)`)
+	// 2021-05-26
+	date20210526 = time.Date(2021, 5, 26, 0, 0, 0, 0, time.Local)
 )
 
 func emailParseCmb(cfg fetchConfig) ([]emailBillOrder, error) {
@@ -104,6 +107,9 @@ func emailParseCmb(cfg fetchConfig) ([]emailBillOrder, error) {
 		if !strings.HasPrefix(mr.Header["Subject"][0], "=?gb2312?B?w7/I1dDF08O53LzS") {
 			continue
 		}
+		// mail date
+		md, _ := time.Parse("Mon, 2 Jan 2006 15:04:05 -0700", mr.Header.Get("Date"))
+		log.Printf("parsing mail @ %s\n", md.Format("2006-01-02"))
 		// parse body
 		mediaType, params, _ := mime.ParseMediaType(mr.Header.Get("Content-Type"))
 		if strings.HasPrefix(mediaType, "multipart/") {
@@ -137,39 +143,10 @@ func emailParseCmb(cfg fetchConfig) ([]emailBillOrder, error) {
 						break
 					}
 					text := strings.TrimSpace(doc.Text())
-					var orderList []string
-					idx := 0
-					// 获取所有交易明细 -> 07:53:41人民币 8.00尾号3885 消费 支付宝-暖煨堂餐饮管理有限公司
-					for i, match := range timeRe.FindAllString(text, -1) {
-						if i == 0 {
-							idx = strings.Index(text, match)
-							continue
-						}
-						tmpIdx := strings.Index(text, match)
-						orderList = append(orderList, strings.TrimSpace(text[idx:tmpIdx]))
-						idx = tmpIdx
-					}
-					orderList = append(orderList, strings.TrimSpace(text[idx:strings.Index(text, "人民币消费")]))
-
-					// 获取消费日期
-					// 邮件内容变更兼容旧邮件
-					dateStr := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
-					if strings.Index(text, "截至") != -1 && strings.Index(text, "24时") != -1 {
-						dateStr = strings.TrimSpace(text[strings.Index(text, "截至")+len("截至") : strings.Index(text, "24时")])
-					} else if strings.Index(text, "消费人民币") != -1 {
-						dateStr = strings.TrimSpace(text[strings.Index(text, "消费人民币")-12 : strings.Index(text, "消费人民币")-2])
-					}
-					dateStr = strings.ReplaceAll(dateStr, "/", "-")
-
-					for _, order := range orderList {
-						// 获取交易时间/金额/描述
-						for _, match := range orderRe.FindAllStringSubmatch(order, -1) {
-							timeStr := strings.TrimSpace(match[1])
-							amountStr := strings.TrimSpace(strings.ReplaceAll(match[2], ",", ""))
-							name := strings.TrimSpace(match[3])
-
-							orders = append(orders, emailBillOrder{Name: name, Time: dateStr + " " + timeStr, Amount: amountStr})
-						}
+					if md.Before(date20210526) {
+						orders = append(orders, parseBefore20210526(text)...)
+					} else {
+						orders = append(orders, parse(doc)...)
 					}
 				}
 
@@ -259,7 +236,7 @@ func fileParseCmb(file string) ([]fileBillOrder, error) {
 			l[0] = strconv.Itoa(year) + "-" + strings.ReplaceAll(l[0], "/", "-")
 			l[4] = strconv.Itoa(year) + "-" + strings.ReplaceAll(l[4], "/", "-")
 		}
-		
+
 		orders = append(orders, fileBillOrder{
 			TradingDate:   l[0],
 			Name:          l[1],
