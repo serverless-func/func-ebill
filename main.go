@@ -33,11 +33,10 @@ func main() {
 }
 
 func setupRouter(r *gin.Engine) {
-	rg := r.Group("/ebill")
-	rg.GET("/ping", func(c *gin.Context) {
+	r.GET("/ping", func(c *gin.Context) {
 		c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte("pong"))
 	})
-	rg.POST("/cmb", func(c *gin.Context) {
+	r.POST("/cmb", func(c *gin.Context) {
 		var cfg fetchConfig
 		if c.ShouldBindJSON(&cfg) != nil {
 			c.JSON(http.StatusOK, failed("missing required body"))
@@ -56,7 +55,7 @@ func setupRouter(r *gin.Engine) {
 		c.JSON(http.StatusOK, data(orders))
 	})
 
-	rg.POST("/file/cmb", func(c *gin.Context) {
+	r.POST("/file/cmb", func(c *gin.Context) {
 		file, err := c.FormFile("file")
 		if err != nil {
 			c.JSON(http.StatusOK, failed(err.Error()))
