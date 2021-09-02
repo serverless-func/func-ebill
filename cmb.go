@@ -44,8 +44,8 @@ var (
 	// 07:53:41
 	timeRe = regexp.MustCompile(`(\d{2}:\d{2}:\d{2})`)
 	// 07:53:41人民币 8.00尾号3885 消费 支付宝-xxxx有限公司
-	orderRe = regexp.MustCompile(`(?m)([\d:]+)人民币([  \d.,]+)(.*)`)
-	orderCNYRe = regexp.MustCompile(`(?m)([\d:]+)CNY([  \d.,]+)(.*)`)
+	orderRe = regexp.MustCompile(`(?m)([\d:]+)人民币([  \-\d.,]+)(.*)`)
+	orderCNYRe = regexp.MustCompile(`(?m)([\d:]+)CNY([  \-\d.,]+)(.*)`)
 	// 2021-05-26
 	date20210526 = time.Date(2021, 5, 26, 0, 0, 0, 0, time.Local)
 )
