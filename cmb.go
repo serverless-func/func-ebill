@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"github.com/ledongthuc/pdf"
+	"github.com/NoF0rte/pdf"
 	"io"
 	"io/ioutil"
 	"log"
@@ -44,10 +44,12 @@ var (
 	// 07:53:41
 	timeRe = regexp.MustCompile(`(\d{2}:\d{2}:\d{2})`)
 	// 07:53:41人民币 8.00尾号3885 消费 支付宝-xxxx有限公司
-	orderRe = regexp.MustCompile(`(?m)([\d:]+)人民币([  \-\d.,]+)(.*)`)
+	orderRe    = regexp.MustCompile(`(?m)([\d:]+)人民币([  \-\d.,]+)(.*)`)
 	orderCNYRe = regexp.MustCompile(`(?m)([\d:]+)CNY([  \-\d.,]+)(.*)`)
 	// 2021-05-26
 	date20210526 = time.Date(2021, 5, 26, 0, 0, 0, 0, time.Local)
+	// 2021-10-31
+	date20211031 = time.Date(2021, 10, 31, 0, 0, 0, 0, time.Local)
 )
 
 func emailParseCmb(cfg fetchConfig) ([]emailBillOrder, error) {
@@ -171,7 +173,8 @@ func fileParseCmb(file string) ([]fileBillOrder, error) {
 	}()
 
 	var year int
-	yearRe := regexp.MustCompile(`\d{4}`)
+	var month int
+	dateRe := regexp.MustCompile(`(\d{4})年(\d{2})月\d{2}日`)
 	blankRe := regexp.MustCompile(`\s+`)
 	// the x coordinate
 	var x float64
@@ -187,8 +190,9 @@ func fileParseCmb(file string) ([]fileBillOrder, error) {
 			// determine new line
 			if math.Abs(text.Y-y) > 1 {
 				// find year
-				if year == 0 && yearRe.FindString(line) != "" {
-					year, _ = strconv.Atoi(yearRe.FindString(line))
+				if year == 0 && dateRe.FindString(line) != "" {
+					year, _ = strconv.Atoi(dateRe.FindAllStringSubmatch(line, -1)[0][1])
+					month, _ = strconv.Atoi(dateRe.FindAllStringSubmatch(line, -1)[0][2])
 				}
 				// stop if reach end of file
 				if strings.TrimSpace(line) == "本期账单金额" {
@@ -204,7 +208,7 @@ func fileParseCmb(file string) ([]fileBillOrder, error) {
 				x, y, line = 0, text.Y, ""
 			}
 			// determine split in one line
-			if x != 0 && math.Abs(text.X-x) > 10 {
+			if x != 0 && math.Abs(text.X-x) > 10 && len(strings.TrimSpace(line)) > 0 {
 				line += "|"
 			}
 			x = text.X
@@ -218,33 +222,60 @@ func fileParseCmb(file string) ([]fileBillOrder, error) {
 	lastMon, _ := strconv.Atoi(strings.Split(lines[len(lines)-1][0], "/")[0])
 	crossYear := (firstMon - lastMon) > 0
 
+	// bill date
+	billDate, _ := time.Parse("2006-01", fmt.Sprintf("%d-%02d", year, month))
+	isBeforeDate20211031 := billDate.Before(date20211031)
+
 	var orders []fileBillOrder
 
 	var max int
-	for idx, l := range lines {
+	for _, l := range lines {
 		// skip title
-		if idx == 0 {
+		if l[0] == "交易日" || l[0] == "SOLD" {
 			continue
 		}
-		// date format
-		mon, _ := strconv.Atoi(strings.Split(l[0], "/")[0])
-		if crossYear && mon >= max {
-			max = mon
-			l[0] = strconv.Itoa(year-1) + "-" + strings.ReplaceAll(l[0], "/", "-")
-			l[4] = strconv.Itoa(year-1) + "-" + strings.ReplaceAll(l[4], "/", "-")
-		} else {
-			l[0] = strconv.Itoa(year) + "-" + strings.ReplaceAll(l[0], "/", "-")
-			l[4] = strconv.Itoa(year) + "-" + strings.ReplaceAll(l[4], "/", "-")
-		}
 
-		orders = append(orders, fileBillOrder{
-			TradingDate:   l[0],
-			Name:          l[1],
-			Amount:        l[2],
-			TailNumber:    l[3],
-			CreditDate:    l[4],
-			TradingAmount: l[5],
-		})
+		if isBeforeDate20211031 {
+			// date format
+			mon, _ := strconv.Atoi(strings.Split(l[0], "/")[0])
+			if crossYear && mon >= max {
+				max = mon
+				l[0] = strconv.Itoa(year-1) + "-" + strings.ReplaceAll(l[0], "/", "-")
+				l[4] = strconv.Itoa(year-1) + "-" + strings.ReplaceAll(l[4], "/", "-")
+			} else {
+				l[0] = strconv.Itoa(year) + "-" + strings.ReplaceAll(l[0], "/", "-")
+				l[4] = strconv.Itoa(year) + "-" + strings.ReplaceAll(l[4], "/", "-")
+			}
+
+			orders = append(orders, fileBillOrder{
+				TradingDate:   l[0],
+				Name:          l[1],
+				Amount:        l[2],
+				TailNumber:    l[3],
+				CreditDate:    l[4],
+				TradingAmount: l[5],
+			})
+		} else {
+			// date format
+			mon, _ := strconv.Atoi(strings.Split(l[0], "/")[0])
+			if crossYear && mon >= max {
+				max = mon
+				l[0] = strconv.Itoa(year-1) + "-" + strings.ReplaceAll(l[0], "/", "-")
+				l[1] = strconv.Itoa(year-1) + "-" + strings.ReplaceAll(l[1], "/", "-")
+			} else {
+				l[0] = strconv.Itoa(year) + "-" + strings.ReplaceAll(l[0], "/", "-")
+				l[1] = strconv.Itoa(year) + "-" + strings.ReplaceAll(l[1], "/", "-")
+			}
+
+			orders = append(orders, fileBillOrder{
+				TradingDate:   l[0],
+				CreditDate:    l[1],
+				Name:          l[2],
+				Amount:        l[3],
+				TailNumber:    l[4],
+				TradingAmount: l[5],
+			})
+		}
 	}
 
 	return orders, nil

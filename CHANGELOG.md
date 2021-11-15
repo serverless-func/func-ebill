@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2021-11-15
+
+### Bugfix
+
+- PDF 解析库更换，修复账单文件升级的解析问题
+- 账单文件升级导致的字段对应问题修复
+
 ## [1.2.2] - 2021-09-02
 
 ### Bugfix
