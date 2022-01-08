@@ -218,7 +218,10 @@ func fileParseCmb(file string) ([]fileBillOrder, error) {
 	// format data
 	// determine if date cross year (transaction date increase in order)
 	// skip title
-	firstMon, _ := strconv.Atoi(strings.Split(lines[1][0], "/")[0])
+	firstMon, err := strconv.Atoi(strings.Split(lines[1][0], "/")[0])
+	if err != nil {
+		firstMon, _ = strconv.Atoi(strings.Split(lines[2][0], "/")[0])
+	}
 	lastMon, _ := strconv.Atoi(strings.Split(lines[len(lines)-1][0], "/")[0])
 	crossYear := (firstMon - lastMon) > 0
 
