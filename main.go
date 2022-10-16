@@ -78,6 +78,31 @@ func setupRouter(r *gin.Engine) {
 
 		c.JSON(http.StatusOK, data(orders))
 	})
+
+	r.POST("/file/spdb", func(c *gin.Context) {
+		password, _ := c.GetPostForm("password")
+		file, err := c.FormFile("file")
+		if err != nil {
+			c.JSON(http.StatusOK, failed(err.Error()))
+			return
+		}
+		filename := "/tmp/" + filepath.Base(file.Filename)
+		if err := c.SaveUploadedFile(file, filename); err != nil {
+			c.JSON(http.StatusOK, failed(err.Error()))
+			return
+		}
+		defer func() {
+			_ = os.Remove(filename)
+		}()
+
+		orders, err := fileParseSpdb(filename, password)
+		if err != nil {
+			c.JSON(http.StatusOK, failed(err.Error()))
+			return
+		}
+
+		c.JSON(http.StatusOK, data(orders))
+	})
 }
 
 func start(srv *http.Server) {
