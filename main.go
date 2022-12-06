@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -17,10 +16,10 @@ type fetchConfig struct {
 	Hour     int64  `form:"hour"`
 }
 
-func main() {
-	http.HandleFunc("/", Handler)
-	log.Fatal(http.ListenAndServe(":9000", nil))
-}
+// func main() {
+// 	http.HandleFunc("/", Handler)
+// 	log.Fatal(http.ListenAndServe(":9000", nil))
+// }
 
 // Handler is the entry point for fission function
 func Handler(w http.ResponseWriter, r *http.Request) {
