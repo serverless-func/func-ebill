@@ -1,17 +1,14 @@
 package main
 
 import (
-	"context"
-	"fmt"
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"syscall"
+	"strings"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 type fetchConfig struct {
@@ -21,130 +18,117 @@ type fetchConfig struct {
 }
 
 func main() {
-	r := gin.New()
-	r.Use(gin.Recovery())
-
-	setupRouter(r)
-
-	start(&http.Server{
-		Addr:    fmt.Sprintf(":%s", getenv("FC_SERVER_PORT", "9000")),
-		Handler: r,
-	})
+	http.HandleFunc("/", Handler)
+	log.Fatal(http.ListenAndServe(":9000", nil))
 }
 
-func setupRouter(r *gin.Engine) {
-	r.GET("/ping", func(c *gin.Context) {
-		c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte("pong"))
-	})
-	r.POST("/cmb", func(c *gin.Context) {
+// Handler is the entry point for fission function
+func Handler(w http.ResponseWriter, r *http.Request) {
+	subpath := r.Header["X-Fission-Params-Subpath"]
+	requestURI := "/" + strings.Join(subpath, ",")
+	switch requestURI {
+	case "/":
+		writeData(w, http.StatusOK, "text/plain; charset=utf-8", []byte("it works"))
+	case "/ping":
+		writeData(w, http.StatusOK, "text/plain; charset=utf-8", []byte("pong"))
+	case "/cmb":
 		var cfg fetchConfig
-		if c.ShouldBindJSON(&cfg) != nil {
-			c.JSON(http.StatusOK, failed("missing required body"))
+		err := json.NewDecoder(r.Body).Decode(&cfg)
+		if err != nil {
+			writeJsonFail(w, "missing required body")
 			return
 		}
 		if cfg.Hour == 0 {
 			cfg.Hour = 24
 		}
-
 		orders, err := emailParseCmb(cfg)
 		if err != nil {
-			c.JSON(http.StatusOK, failed(err.Error()))
+			writeJsonFail(w, err.Error())
 			return
 		}
-
-		c.JSON(http.StatusOK, data(orders))
-	})
-
-	r.POST("/file/cmb", func(c *gin.Context) {
-		file, err := c.FormFile("file")
+		writeJsonData(w, orders)
+	case "/file/cmb":
+		file, fh, err := r.FormFile("file")
 		if err != nil {
-			c.JSON(http.StatusOK, failed(err.Error()))
+			writeJsonFail(w, err.Error())
 			return
 		}
-		filename := "/tmp/" + filepath.Base(file.Filename)
-		if err := c.SaveUploadedFile(file, filename); err != nil {
-			c.JSON(http.StatusOK, failed(err.Error()))
+		localfilepath := "/tmp/" + filepath.Base(fh.Filename)
+		localfile, err := os.OpenFile(localfilepath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+		if err != nil {
+			writeJsonFail(w, err.Error())
+			return
+		}
+		_, err = io.Copy(localfile, file)
+		localfile.Close()
+		if err != nil {
+			writeJsonFail(w, err.Error())
 			return
 		}
 		defer func() {
-			_ = os.Remove(filename)
+			_ = os.Remove(localfilepath)
 		}()
-
-		orders, err := fileParseCmb(filename)
+		orders, err := fileParseCmb(localfilepath)
 		if err != nil {
-			c.JSON(http.StatusOK, failed(err.Error()))
+			writeJsonFail(w, err.Error())
 			return
 		}
 
-		c.JSON(http.StatusOK, data(orders))
-	})
-
-	r.POST("/file/spdb", func(c *gin.Context) {
-		password, _ := c.GetPostForm("password")
-		file, err := c.FormFile("file")
+		writeJsonData(w, orders)
+	case "/file/spdb":
+		file, fh, err := r.FormFile("file")
 		if err != nil {
-			c.JSON(http.StatusOK, failed(err.Error()))
+			writeJsonFail(w, err.Error())
 			return
 		}
-		filename := "/tmp/" + filepath.Base(file.Filename)
-		if err := c.SaveUploadedFile(file, filename); err != nil {
-			c.JSON(http.StatusOK, failed(err.Error()))
+		localfilepath := "/tmp/" + filepath.Base(fh.Filename)
+		localfile, err := os.OpenFile(localfilepath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+		if err != nil {
+			writeJsonFail(w, err.Error())
+			return
+		}
+		_, err = io.Copy(localfile, file)
+		localfile.Close()
+		if err != nil {
+			writeJsonFail(w, err.Error())
 			return
 		}
 		defer func() {
-			_ = os.Remove(filename)
+			_ = os.Remove(localfilepath)
 		}()
 
-		orders, err := fileParseSpdb(filename, password)
+		orders, err := fileParseSpdb(localfilepath, r.FormValue("password"))
 		if err != nil {
-			c.JSON(http.StatusOK, failed(err.Error()))
+			writeJsonFail(w, err.Error())
 			return
 		}
 
-		c.JSON(http.StatusOK, data(orders))
-	})
+		writeJsonData(w, orders)
+	}
+
 }
 
-func start(srv *http.Server) {
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("listen: %s\n", err)
-		}
-	}()
-
-	log.Printf("Start Server @ %s", srv.Addr)
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Print("Shutdown Server ...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("Server Shutdown:%s", err)
-	}
-	<-ctx.Done()
-	log.Print("Server exiting")
+func writeData(w http.ResponseWriter, code int, contentType string, data []byte) {
+	w.Header().Set("Content-Type", contentType)
+	w.WriteHeader(code)
+	w.Write(data)
 }
 
-func getenv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
+func writeJsonData(w http.ResponseWriter, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	body := make(map[string]interface{})
+	body["msg"] = "success"
+	body["data"] = data
+	body["timestamp"] = time.Now().Unix()
+	json.NewEncoder(w).Encode(body)
 }
 
-func failed(msg string) gin.H {
-	return gin.H{
-		"msg":       msg,
-		"timestamp": time.Now().Unix(),
-	}
-}
-
-func data(data interface{}) gin.H {
-	return gin.H{
-		"msg":       "success",
-		"data":      data,
-		"timestamp": time.Now().Unix(),
-	}
+func writeJsonFail(w http.ResponseWriter, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	body := make(map[string]interface{})
+	body["msg"] = msg
+	body["timestamp"] = time.Now().Unix()
+	json.NewEncoder(w).Encode(body)
 }
