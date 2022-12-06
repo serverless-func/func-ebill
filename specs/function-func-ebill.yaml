@@ -11,6 +11,7 @@ metadata:
   name: func-ebill-a9364553-4ee1-4e8c-b6f4-64cfe0754077
   namespace: default
 spec:
+  buildcmd: ./customBuild.sh
   deployment:
     checksum: {}
   environment:
