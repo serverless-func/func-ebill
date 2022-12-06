@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/PuerkitoBio/goquery"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 func parse(doc *goquery.Document) []emailBillOrder {
@@ -53,9 +54,9 @@ func parseBefore20210526(text string) []emailBillOrder {
 	// 获取消费日期
 	// 邮件内容变更兼容旧邮件
 	dateStr := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
-	if strings.Index(text, "截至") != -1 && strings.Index(text, "24时") != -1 {
+	if strings.Contains(text, "截至") && strings.Contains(text, "24时") {
 		dateStr = strings.TrimSpace(text[strings.Index(text, "截至")+len("截至") : strings.Index(text, "24时")])
-	} else if strings.Index(text, "消费人民币") != -1 {
+	} else if strings.Contains(text, "消费人民币") {
 		dateStr = strings.TrimSpace(text[strings.Index(text, "消费人民币")-12 : strings.Index(text, "消费人民币")-2])
 	}
 	dateStr = strings.ReplaceAll(dateStr, "/", "-")
