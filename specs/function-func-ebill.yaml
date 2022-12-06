@@ -1,0 +1,55 @@
+include:
+- src.zip
+kind: ArchiveUploadSpec
+name: src-zip-7ada
+
+---
+apiVersion: fission.io/v1
+kind: Package
+metadata:
+  creationTimestamp: null
+  name: func-ebill-a9364553-4ee1-4e8c-b6f4-64cfe0754077
+  namespace: default
+spec:
+  deployment:
+    checksum: {}
+  environment:
+    name: go
+    namespace: default
+  source:
+    checksum: {}
+    type: url
+    url: archive://src-zip-7ada
+status:
+  buildstatus: pending
+  lastUpdateTimestamp: "2022-12-06T02:23:09Z"
+
+---
+apiVersion: fission.io/v1
+kind: Function
+metadata:
+  creationTimestamp: null
+  name: func-ebill
+  namespace: default
+spec:
+  InvokeStrategy:
+    ExecutionStrategy:
+      ExecutorType: poolmgr
+      MaxScale: 0
+      MinScale: 0
+      SpecializationTimeout: 120
+      TargetCPUPercent: 0
+    StrategyType: execution
+  concurrency: 500
+  environment:
+    name: go
+    namespace: default
+  functionTimeout: 60
+  idletimeout: 120
+  package:
+    functionName: Handler
+    packageref:
+      name: func-ebill-a9364553-4ee1-4e8c-b6f4-64cfe0754077
+      namespace: default
+  requestsPerPod: 1
+  resources: {}
