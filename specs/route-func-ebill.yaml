@@ -10,7 +10,7 @@ spec:
     functionweights: null
     name: func-ebill
     type: name
-  host: ""
+  host: "ebill.func.dongfg.com"
   ingressconfig:
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-dongfg
