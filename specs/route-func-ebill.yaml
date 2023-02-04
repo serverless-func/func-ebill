@@ -15,7 +15,7 @@ spec:
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-dongfg
     host: ebill.func.dongfg.com
-    path: /{subpath}
+    path: /
     tls: tls-ebill-func-dongfg
   method: ""
   methods:
