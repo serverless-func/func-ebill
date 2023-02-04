@@ -28,6 +28,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	switch requestURI {
 	case "/":
 		writeData(w, http.StatusOK, "text/plain; charset=utf-8", []byte("it works"))
+	case "/debug":
+		writeData(w, http.StatusOK, "text/plain; charset=utf-8", []byte("requestURI=" + requestURI))
 	case "/ping":
 		writeData(w, http.StatusOK, "text/plain; charset=utf-8", []byte("pong"))
 	case "/cmb":
