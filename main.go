@@ -105,7 +105,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		writeJsonData(w, orders)
 
 	default:
-		writeData(w, http.StatusOK, "text/plain; charset=utf-8", []byte("requestURI=" + requestURI))
+		writeJsonData(w, r.Header)
 	}
 }
 

@@ -15,11 +15,10 @@ spec:
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-dongfg
     host: ebill.func.dongfg.com
-    path: /
+    path: /{subpath}
     tls: tls-ebill-func-dongfg
   method: ""
   methods:
   - GET
   - POST
   prefix: ""
-  relativeurl: /{Subpath}
