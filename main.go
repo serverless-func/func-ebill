@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -23,14 +22,13 @@ type fetchConfig struct {
 
 // Handler is the entry point for fission function
 func Handler(w http.ResponseWriter, r *http.Request) {
-	subpath := r.Header["X-Fission-Params-Subpath"]
-	requestURI := "/" + strings.Join(subpath, ",")
-	switch requestURI {
-	case "/":
+	action := r.URL.Query().Get("Action")
+	switch action {
+	case "":
 		writeData(w, http.StatusOK, "text/plain; charset=utf-8", []byte("it works"))
-	case "/ping":
+	case "Ping":
 		writeData(w, http.StatusOK, "text/plain; charset=utf-8", []byte("pong"))
-	case "/cmb":
+	case "Cmb":
 		var cfg fetchConfig
 		err := json.NewDecoder(r.Body).Decode(&cfg)
 		if err != nil {
@@ -46,7 +44,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJsonData(w, orders)
-	case "/file/cmb":
+	case "FileCmb":
 		file, fh, err := r.FormFile("file")
 		if err != nil {
 			writeJsonFail(w, err.Error())
@@ -74,7 +72,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		writeJsonData(w, orders)
-	case "/file/spdb":
+	case "FileSpdb":
 		file, fh, err := r.FormFile("file")
 		if err != nil {
 			writeJsonFail(w, err.Error())
@@ -104,7 +102,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 		writeJsonData(w, orders)
 
-	default:
+	case "Debug":
 		writeJsonData(w, r.Header)
 	}
 }
