@@ -23,4 +23,3 @@ spec:
   - GET
   - POST
   prefix: ""
-  relativeurl: /{Subpath}
