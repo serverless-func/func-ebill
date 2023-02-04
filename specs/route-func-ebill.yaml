@@ -14,9 +14,8 @@ spec:
   ingressconfig:
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-dongfg
-      nginx.ingress.kubernetes.io/use-regex: "true"
     host: ebill.func.dongfg.com
-    path: /.*
+    path: /
     tls: tls-ebill-func-dongfg
   method: ""
   methods:
