@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/NoF0rte/pdf"
 	"io"
-	"io/ioutil"
 	"log"
 	"math"
 	"mime"
@@ -105,12 +104,15 @@ func emailParseCmb(cfg fetchConfig) ([]emailBillOrder, error) {
 			log.Printf("read email error: %s\n", err.Error())
 			continue
 		}
-		// "=?GBK?B?" + base64("每日信用管家", "GBK") + "?="
-		if !strings.HasPrefix(mr.Header["Subject"][0], "=?gb2312?B?w7/I1dDF08O53LzS") {
+		// "=?GBK?B?" + base64("每日信用管家", "GBK") + "?=" => =?gb2312?B?w7/I1dDF08O53LzS?=
+		// 2023-06-23 之后邮件切换了编码
+		// "=?utf-8?B?" + base64("每日信用管家", "utf-8") + "?=" => =?utf-8?B?5q+P5pel5L+h55So566h5a62?=
+		if !strings.HasPrefix(mr.Header["Subject"][0], "=?gb2312?B?w7/I1dDF08O53LzS") && !strings.HasPrefix(mr.Header["Subject"][0], "=?utf-8?B?5q+P5pel5L+h55So566h5a6") {
 			continue
 		}
 		// mail date
-		md, _ := time.Parse("Mon, 2 Jan 2006 15:04:05 -0700", mr.Header.Get("Date"))
+		// 2023-06-23 之后日期中添加了 (CST) => Fri, 23 Jun 2023 10:51:24 +0800 (CST)
+		md, _ := time.Parse("Mon, 2 Jan 2006 15:04:05 -0700", strings.ReplaceAll(mr.Header.Get("Date"), " (CST)", ""))
 		log.Printf("parsing mail @ %s\n", md.Format("2006-01-02"))
 		// parse body
 		mediaType, params, _ := mime.ParseMediaType(mr.Header.Get("Content-Type"))
@@ -126,7 +128,7 @@ func emailParseCmb(cfg fetchConfig) ([]emailBillOrder, error) {
 					break
 				}
 
-				slurp, err := ioutil.ReadAll(p)
+				slurp, err := io.ReadAll(p)
 				if err != nil {
 					log.Printf("email body parse error: %s\n", err.Error())
 					break
@@ -150,6 +152,15 @@ func emailParseCmb(cfg fetchConfig) ([]emailBillOrder, error) {
 					} else {
 						orders = append(orders, parse(doc)...)
 					}
+				} else if p.Header.Get("Content-Type") == "text/html; charset=utf-8" {
+					// 2023-06-23 之后邮件切换了编码 text/html; charset=utf-8
+					// parse html
+					doc, err := goquery.NewDocumentFromReader(bytes.NewReader(slurp))
+					if err != nil {
+						log.Printf("parse html error: %s\n", err.Error())
+						break
+					}
+					orders = append(orders, parse(doc)...)
 				}
 
 			}
