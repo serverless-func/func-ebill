@@ -1,0 +1,29 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - "*"
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKER_REG_HOST }}/${{ vars.DOCKER_REG_ORG }}/${{ github.event.repository.name }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.DOCKER_REG_HOST }}
+          username: ${{ secrets.DOCKER_REG_USERNAME }}
+          password: ${{ secrets.DOCKER_REG_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ github.ref_name }}, ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:latest
+          cache-to: type=inline
