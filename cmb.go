@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"github.com/NoF0rte/pdf"
 	"io"
 	"log"
 	"math"
@@ -15,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/NoF0rte/pdf"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/emersion/go-imap"
@@ -262,11 +263,11 @@ func fileParseCmb(file string) ([]fileBillOrder, error) {
 			}
 
 			orders = append(orders, fileBillOrder{
-				TradingDate:   l[0],
-				Name:          l[1],
+				TradingDate:   strings.ReplaceAll(l[0], " ", ""),
+				Name:          strings.ReplaceAll(l[1], " ", ""),
 				Amount:        l[2],
 				TailNumber:    l[3],
-				CreditDate:    l[4],
+				CreditDate:    strings.ReplaceAll(l[4], " ", ""),
 				TradingAmount: l[5],
 			})
 		} else {
@@ -282,9 +283,9 @@ func fileParseCmb(file string) ([]fileBillOrder, error) {
 			}
 
 			orders = append(orders, fileBillOrder{
-				TradingDate:   l[0],
-				CreditDate:    l[1],
-				Name:          l[2],
+				TradingDate:   strings.ReplaceAll(l[0], " ", ""),
+				CreditDate:    strings.ReplaceAll(l[1], " ", ""),
+				Name:          strings.ReplaceAll(l[2], " ", ""),
 				Amount:        l[3],
 				TailNumber:    l[4],
 				TradingAmount: l[5],
