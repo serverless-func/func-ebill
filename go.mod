@@ -1,6 +1,6 @@
 module github.com/serverless-aliyun/fun-ebill
 
-go 1.15
+go 1.24.1
 
 require (
 	github.com/NoF0rte/pdf v0.0.5

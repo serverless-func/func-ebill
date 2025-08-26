@@ -1,0 +1,38 @@
+name: Dependabot Auto Merge
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+jobs:
+  check-and-merge:
+    # 关键条件：仅处理 Dependabot 的 PR
+    if: |
+      startsWith(github.head_ref, 'dependabot/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 必需权限
+      pull-requests: write
+      checks: write
+    steps:
+      # 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ">=1.24.1"
+      - name: Build project
+        run: |
+          go build
+      - name: Auto-merge PR
+        if: success() # 仅在构建成功时运行
+        uses: actions/github-script@v7
+        with:
+          script: |-
+            github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              merge_method: 'squash'
+            })
