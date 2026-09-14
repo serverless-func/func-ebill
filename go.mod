@@ -1,13 +1,13 @@
 module github.com/serverless-aliyun/fun-ebill
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/NoF0rte/pdf v0.0.5
 	github.com/PuerkitoBio/goquery v1.13.0
 	github.com/emersion/go-imap v1.2.1
 	github.com/gin-gonic/gin v1.12.0
-	golang.org/x/text v0.41.0
+	golang.org/x/text v0.42.0
 )
 
 require (
